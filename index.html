@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>思考醸造所</title>
+
+  <!-- ===== PWA / iOS ホーム画面アプリ対応 ===== -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#5C7A6B">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="思考醸造所">
+  <link rel="apple-touch-icon" href="./icon-180.png">
+  <link rel="icon" href="./favicon.png">
+
+  <style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --sage:#5C7A6B;--sage-l:#8FAF9E;--sage-p:#E8F0EC;
+    --amber:#A07840;--amber-p:#F5EDD8;
+    --stone:#7A7670;--stone-l:#B0ACA8;
+    --ink:#2A2826;--paper:#F7F5F0;--paper-w:#EDE9E0;--white:#FFFFFF;
+    --morn-d:#C8B89A;
+    --violet-p:#EDE9FA;--violet:#6C47C9;
+    --danger-p:#FDECEA;--danger:#C0392B;
+  }
+
+  /* ===== ダークモード（18時以降 or 手動）===== */
+  :root.dark{
+    --sage:#8FAF9E;--sage-l:#A7C4B4;--sage-p:#26352E;
+    --amber:#C9A45C;--amber-p:#352B1B;
+    --stone:#A39E96;--stone-l:#6F6A63;
+    --ink:#ECE7DD;--paper:#1B1A18;--paper-w:#252320;--white:#272521;
+    --morn-d:#6E6452;
+    --violet-p:#2C2640;--violet:#B49BEC;
+    --danger-p:#3A211E;--danger:#E0695C;
+  }
+  :root.dark .cnt-badge:hover{background:#2f4339;}
+  :root.dark .dbg-btn{background:#2a2620;}
+  :root.dark .dbg-btn:hover{background:#35302a;}
+  :root.dark .step-card-a{background:#22302A;border-color:rgba(143,175,158,.25);}
+  :root.dark .step-card-c{background:#2A2640;border-color:rgba(180,155,236,.22);}
+  :root.dark .step-card-d{background:#332515;border-color:rgba(201,164,92,.25);}
+  :root.dark .help-close:hover{background:#35302a;}
+  :root.dark .save-btn:active{background:#3a5249;}
+  html{transition:background-color .35s ease;}
+  body,.app,.hdr,.tab-bar,.memo-inp,.mc,.cat-card,.m-sheet,.help-sheet,.s-ov,.rip-btn,.mix-inp,.concept-box,.m-card,.cnt-badge,.help-btn{transition:background-color .35s ease,color .35s ease,border-color .35s ease;}
+
+  /* スマホの動的高さに対応（dvh）し、スクロールのバグを防ぐ */
+  body{
+    font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+  }
+
+  .app{
+    width: 100%;
+    max-width:420px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display:flex;
+    flex-direction:column;
+    background:var(--paper);
+    position: relative;
+    /* 下部バー（セーフエリア）のパディング確保 */
+    padding-bottom: calc(env(safe-area-inset-bottom) + 60px);
+  }
+
+  /* Header */
+  .hdr{
+    padding: calc(env(safe-area-inset-top) + 16px) 18px 12px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:.5px solid rgba(92,122,107,.2);
+    background: var(--paper);
+  }
+  .hdr-l{display:flex;flex-direction:column;}
+  .hdr-t{font-size:15px;color:var(--sage);font-weight:bold;letter-spacing:.08em;}
+  .hdr-s{font-size:11px;color:var(--stone-l);letter-spacing:.04em;margin-top:2px;}
+  .hdr-r{display:flex;align-items:center;gap:8px;}
+  .cnt-badge{font-size:12px;color:var(--sage);background:var(--sage-p);padding:5px 12px;border-radius:20px;font-weight:500;cursor:pointer;}
+  .cnt-badge:hover{background:#d4e4db;}
+  .help-btn{width:32px;height:32px;border-radius:50%;border:.5px solid rgba(92,122,107,.35);background:var(--white);color:var(--sage);font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+  .help-btn:hover{background:var(--sage-p);}
+
+  /* Screens */
+  .screen{display:none;flex-direction:column;flex:1;}
+  .screen.active{display:flex;}
+
+  /* Memo */
+  .memo-area{flex:1;padding:20px 18px 10px;display:flex;flex-direction:column;gap: 10px;}
+  .hint{font-size:13px;color:var(--stone-l);letter-spacing:.04em;}
+
+  /* テキストエリアが伸びすぎないよう最大高さを制限、または適切なバランスに */
+  .memo-inp{
+    flex: 1;
+    min-height: 180px;
+    max-height: 320px;
+    width: 100%;
+    background:var(--white);
+    border:.5px solid rgba(92,122,107,.25);
+    border-radius:12px;
+    padding:14px;
+    font-size:16px;
+    font-family:inherit;
+    color:var(--ink);
+    resize:none;
+    outline:none;
+    line-height:1.7;
+    transition:border-color .2s;
+  }
+  .memo-inp:focus{border-color:var(--sage);}
+  .memo-inp::placeholder{color:var(--stone-l);}
+  .rip-sec{margin-top:8px;}
+  .rip-lbl{font-size:13px;color:var(--stone);margin-bottom:8px;}
+  .rip-opts{display:flex;gap:8px;}
+  .rip-btn{flex:1;padding:12px 4px;border:.5px solid rgba(92,122,107,.3);border-radius:8px;background:var(--white);font-size:12px;font-family:inherit;color:var(--stone);cursor:pointer;transition:all .2s;text-align:center;line-height:1.45;}
+  .rip-btn.sel{background:var(--sage-p);border-color:var(--sage);color:var(--sage);font-weight:500;}
+
+  .save-btn{
+    margin: 15px 18px 10px;
+    width: calc(100% - 36px);
+    padding: 16px;
+    background:var(--sage);
+    color:var(--white);
+    border:none;
+    border-radius:12px;
+    font-size:16px;
+    font-family:inherit;
+    font-weight:bold;
+    cursor:pointer;
+    transition:background .2s,transform .1s;
+    box-shadow: 0 4px 12px rgba(92,122,107,0.15);
+  }
+  .save-btn:active{transform:scale(.98);background:#4a6459;}
+
+  .dbg{margin:5px 18px 15px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content: center;}
+  .dbg-btn{font-size:11px;font-family:inherit;padding:6px 10px;border:.5px dashed var(--morn-d);border-radius:20px;background:#f0e9de;color:var(--amber);cursor:pointer;}
+  .dbg-btn:hover{background:#ddd3c0;}
+  .dbg-lbl{font-size:11px;color:var(--stone-l);}
+
+  /* Tabs - 最下部に固定配置 */
+  .tab-bar{
+    display:flex;
+    border-top:.5px solid rgba(92,122,107,.15);
+    background:var(--paper);
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 200;
+  }
+  .tab{flex:1;padding:12px 6px;border:none;background:none;font-size:11px;font-family:inherit;color:var(--stone-l);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .2s;}
+  .tab.active{color:var(--sage);font-weight: bold;}
+  .tab-icon{font-size:18px;}
+
+  /* List */
+  .lst-hdr{padding:16px 18px 10px;display:flex;align-items:center;gap:10px;}
+  .back-btn{width:36px;height:36px;border:.5px solid rgba(92,122,107,.3);border-radius:8px;background:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--sage);}
+  .back-btn:hover{background:var(--sage-p);}
+  .lst-ttl{font-size:16px;font-weight:500;color:var(--ink);}
+  .memo-list{flex:1;overflow-y:auto;padding:0 14px 80px;}
+  .mc{background:var(--white);border:.5px solid rgba(122,118,112,.2);border-radius:12px;padding:14px;margin-bottom:10px;}
+  .mc-txt{font-size:15px;color:var(--ink);line-height:1.65;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .mc-meta{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:.5px solid rgba(122,118,112,.12);}
+  .mc-time{font-size:12px;color:var(--stone-l);}
+  .badge{font-size:12px;padding:4px 10px;border-radius:20px;font-weight:500;}
+  .b-brew{background:var(--amber-p);color:var(--amber);}
+  .b-ripe{background:var(--sage-p);color:var(--sage);}
+  .b-promoted{background:var(--violet-p);color:var(--violet);}
+  .del-btn{font-size:12px;color:var(--stone-l);border:none;background:none;cursor:pointer;padding:4px 8px;border-radius:4px;font-family:inherit;}
+  .del-btn:hover{color:var(--danger);background:var(--danger-p);}
+  .brew-bar{height:4px;background:rgba(92,122,107,.12);border-radius:2px;margin-top:8px;overflow:hidden;}
+  .brew-fill{height:100%;background:var(--sage);border-radius:2px;}
+  .brew-lbl{font-size:11px;color:var(--stone-l);margin-top:4px;display:flex;justify-content:space-between;}
+  .empty{text-align:center;padding:60px 18px;color:var(--stone-l);}
+  .empty-ic{font-size:40px;margin-bottom:12px;}
+  .empty-tx{font-size:14px;line-height:1.7;}
+
+  /* Mixer */
+  .mix-area{flex:1;overflow-y:auto;padding:18px 18px 80px;}
+  .mix-sec-lbl{font-size:13px;color:var(--stone);margin-bottom:8px;}
+  .mix-inp{width:100%;padding:13px;border:.5px solid rgba(92,122,107,.25);border-radius:10px;background:var(--white);font-size:16px;font-family:inherit;color:var(--ink);outline:none;transition:border-color .2s;}
+  .mix-inp:focus{border-color:var(--sage);}
+  .mix-inp::placeholder{color:var(--stone-l);}
+  .mix-btn{width:100%;margin-top:12px;padding:14px;background:var(--sage);color:var(--white);border:none;border-radius:10px;font-size:15px;font-family:inherit;font-weight:500;cursor:pointer;transition:background .2s,transform .1s;}
+  .mix-btn:active{transform:scale(.98);}
+  .cat-wrap{margin-top:20px;}
+  .cat-lbl{font-size:13px;color:var(--stone);margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+  .cat-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);}
+  .cat-card{background:var(--amber-p);border:.5px solid rgba(160,120,64,.25);border-radius:12px;padding:16px;position:relative;overflow:hidden;}
+  .cat-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--amber);}
+  .cat-theme-row{display:flex;align-items:center;gap:7px;margin-bottom:10px;}
+  .cat-theme-badge{font-size:13px;font-weight:500;color:var(--sage);background:var(--sage-p);padding:4px 10px;border-radius:20px;}
+  .cat-cross{font-size:16px;color:var(--stone-l);}
+  .cat-age{font-size:12px;color:var(--amber);margin-bottom:6px;font-weight:500;}
+  .cat-txt{font-size:15px;color:var(--ink);line-height:1.7;}
+  .cat-prompt{margin-top:14px;padding-top:12px;border-top:.5px solid rgba(160,120,64,.2);}
+  .cat-prompt-lbl{font-size:12px;color:var(--amber);margin-bottom:6px;font-weight:500;}
+  .cat-prompt-txt{font-size:14px;color:var(--stone);line-height:1.65;}
+  .cat-score{font-size:11px;color:var(--stone-l);margin-top:10px;text-align:right;}
+  .mix-empty{text-align:center;padding:40px 18px;color:var(--stone-l);}
+  .mix-re-btn{width:100%;margin-top:12px;padding:13px;background:var(--paper-w);color:var(--stone);border:.5px solid rgba(122,118,112,.25);border-radius:10px;font-size:14px;font-family:inherit;cursor:pointer;}
+
+  /* Save overlay */
+  .s-ov{position:fixed;inset:0;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;opacity:0;pointer-events:none;transition:opacity .3s;}
+  .s-ov.show{opacity:1;pointer-events:all;}
+  .s-ic{width:64px;height:64px;border-radius:50%;background:var(--sage-p);display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:28px;}
+  .s-tx{font-size:18px;color:var(--sage);font-weight:500;letter-spacing:.06em;}
+  .s-sub{font-size:13px;color:var(--stone-l);margin-top:6px;}
+
+  /* Toast */
+  .toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;z-index:600;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* Morning overlay */
+  .m-ov{position:fixed;inset:0;z-index:400;background:rgba(30,24,18,.72);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .4s;}
+  .m-ov.show{opacity:1;pointer-events:all;}
+  .m-sheet{background:var(--paper);border-radius:22px 22px 0 0;width:100%;max-width:420px;padding:0 0 calc(env(safe-area-inset-bottom) + 20px);transform:translateY(40px);transition:transform .4s cubic-bezier(.22,1,.36,1);max-height:90vh;display:flex;flex-direction:column;}
+  .m-ov.show .m-sheet{transform:translateY(0);}
+  .m-handle{width:34px;height:4px;background:var(--morn-d);border-radius:2px;margin:12px auto 0;opacity:.45;}
+  .m-hdr{padding:16px 20px 8px;}
+  .m-tag{font-size:12px;color:var(--amber);background:var(--amber-p);padding:4px 10px;border-radius:20px;font-weight:500;display:inline-block;margin-bottom:8px;}
+  .m-title{font-size:19px;font-weight:500;color:var(--ink);line-height:1.4;}
+  .m-sub{font-size:14px;color:var(--stone);margin-top:6px;line-height:1.6;}
+  .m-prog{padding:8px 20px 0;}
+  .m-prog-tx{font-size:13px;color:var(--stone-l);text-align:center;margin-bottom:5px;}
+  .m-prog-bar{height:4px;background:rgba(92,122,107,.12);border-radius:2px;}
+  .m-prog-fill{height:100%;background:var(--sage-l);border-radius:2px;transition:width .5s;}
+  .m-cw{flex:1;overflow-y:auto;padding:12px 16px 0;}
+  .m-card{background:var(--white);border:.5px solid rgba(92,122,107,.25);border-radius:14px;padding:18px;position:relative;}
+  .m-card-glow{position:absolute;top:-1px;left:-1px;right:-1px;bottom:-1px;border-radius:14px;border:1.5px solid rgba(92,122,107,.38);pointer-events:none;}
+  .m-card-age{font-size:12px;color:var(--amber);margin-bottom:6px;font-weight:500;}
+  .m-card-txt{font-size:16px;color:var(--ink);line-height:1.75;}
+  .m-actions{display:flex;gap:10px;margin-top:16px;margin-bottom: 10px;}
+  .m-act{flex:1;padding:14px;border-radius:11px;font-size:14px;font-family:inherit;font-weight:500;cursor:pointer;border:none;transition:transform .1s;display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .m-act:active{transform:scale(.97);}
+  .m-act-keep{background:var(--sage);color:var(--white);}
+  .m-act-pass{background:var(--paper-w);color:var(--stone);border:.5px solid rgba(122,118,112,.25);}
+  .m-act-sub{font-size:11px;font-weight:400;opacity:.75;}
+  .m-done{text-align:center;padding:40px 20px;}
+  .m-done-ic{font-size:44px;margin-bottom:12px;}
+  .m-done-tx{font-size:18px;font-weight:500;color:var(--ink);margin-bottom:8px;}
+  .m-done-sub{font-size:14px;color:var(--stone);line-height:1.65;margin-bottom:24px;white-space:pre-line;}
+  .m-done-btn{padding:14px 28px;background:var(--sage);color:var(--white);border:none;border-radius:11px;font-size:15px;font-family:inherit;font-weight:500;cursor:pointer;}
+  @keyframes swK{to{transform:translateX(60px) rotate(6deg);opacity:0;}}
+  @keyframes swP{to{transform:translateX(-60px) rotate(-6deg);opacity:0;}}
+  .sw-k{animation:swK .35s ease forwards;}
+  .sw-p{animation:swP .35s ease forwards;}
+  @keyframes sFade{0%{opacity:.45;transform:scaleY(1);}100%{opacity:0;transform:scaleY(0);max-height:0;margin-bottom:0;padding:0;}}
+  .silent-fading{animation:sFade .6s ease forwards;}
+
+  /* Help Overlay */
+  .help-ov{position:fixed;inset:0;z-index:700;background:rgba(30,24,18,.72);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .35s;}
+  .help-ov.show{opacity:1;pointer-events:all;}
+  .help-sheet{background:var(--paper);border-radius:22px 22px 0 0;width:100%;max-width:420px;transform:translateY(48px);transition:transform .4s cubic-bezier(.22,1,.36,1);max-height:92vh;display:flex;flex-direction:column;padding-bottom: env(safe-area-inset-bottom);}
+  .help-ov.show .help-sheet{transform:translateY(0);}
+  .help-handle{width:34px;height:4px;background:var(--morn-d);border-radius:2px;margin:12px auto 0;opacity:.4;flex-shrink:0;}
+  .help-hdr{padding:16px 20px 0;display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
+  .help-eyebrow{font-size:12px;color:var(--sage);font-weight:500;letter-spacing:.07em;margin-bottom:5px;}
+  .help-title{font-size:19px;font-weight:500;color:var(--ink);line-height:1.35;}
+  .help-close{width:30px;height:30px;border-radius:50%;border:.5px solid rgba(122,118,112,.3);background:var(--paper-w);color:var(--stone);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+  .help-close:hover{background:#ddd8d0;}
+  .help-scroll{flex:1;overflow-y:auto;padding:16px 20px 32px;}
+
+  .step-card{border-radius:14px;padding:16px;margin-bottom:14px;border:.5px solid transparent;}
+  .step-card-a{background:#EAF3EE;border-color:rgba(92,122,107,.2);}
+  .step-card-b{background:var(--amber-p);border-color:rgba(160,120,64,.18);}
+  .step-card-c{background:#F0EDF8;border-color:rgba(108,71,201,.15);}
+  .step-card-d{background:#FEF3E8;border-color:rgba(200,140,60,.2);}
+  .step-num{font-size:11px;font-weight:600;letter-spacing:.08em;margin-bottom:6px;}
+  .step-num-a{color:var(--sage);}
+  .step-num-b{color:var(--amber);}
+  .step-num-c{color:var(--violet);}
+  .step-num-d{color:#C07030;}
+  .step-icon{font-size:26px;margin-bottom:8px;}
+  .step-name{font-size:15px;font-weight:500;color:var(--ink);margin-bottom:6px;line-height:1.35;}
+  .step-desc{font-size:14px;color:var(--stone);line-height:1.72;}
+  .step-tag{display:inline-block;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;margin-top:8px;}
+  .stag-a{background:var(--sage-p);color:var(--sage);}
+  .stag-b{background:var(--amber-p);color:var(--amber);border:.5px solid rgba(160,120,64,.3);}
+  .stag-c{background:var(--violet-p);color:var(--violet);}
+  .stag-d{background:#FDEBD0;color:#A06020;}
+
+  .concept-box{background:var(--white);border:.5px solid rgba(92,122,107,.2);border-radius:14px;padding:16px;margin-bottom:14px;}
+  .concept-q{font-size:14px;font-weight:500;color:var(--sage);margin-bottom:8px;}
+  .concept-body{font-size:14px;color:var(--stone);line-height:1.75;}
+  .concept-accent{color:var(--ink);font-weight:500;}
+
+  .try-banner{background:var(--sage);border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:14px;cursor:pointer;transition:background .2s;}
+  .try-banner:hover{background:#4a6459;}
+  .try-icon{font-size:24px;flex-shrink:0;}
+  .try-txt{font-size:14px;color:rgba(255,255,255,.92);line-height:1.55;}
+  .try-arr{font-size:18px;color:rgba(255,255,255,.6);flex-shrink:0;}
+
+  .divider{height:.5px;background:rgba(122,118,112,.15);margin:14px 0;}
+  .section-lbl{font-size:12px;font-weight:500;color:var(--stone-l);letter-spacing:.07em;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="hdr">
+    <div class="hdr-l">
+      <div class="hdr-t">思考醸造所</div>
+      <div class="hdr-s">アイデアを預けて、忘れる</div>
+    </div>
+    <div class="hdr-r">
+      <div class="cnt-badge" onclick="showList()" id="cntBadge">0件醸造中</div>
+      <button class="help-btn" id="themeBtn" onclick="cycleTheme()" title="テーマ切替">🌗</button>
+      <button class="help-btn" onclick="openHelp()" title="解説を見る">？</button>
+    </div>
+  </div>
+
+  <div class="screen active" id="scMemo">
+    <div class="memo-area">
+      <div class="hint">今、頭の中にあることをそのまま</div>
+      <textarea class="memo-inp" id="memoInp" placeholder="アイデア、気づき、断片的な言葉…なんでも。" autofocus></textarea>
+      <div class="rip-sec">
+        <div class="rip-lbl">熟成期間</div>
+        <div class="rip-opts">
+          <button class="rip-btn sel" onclick="selRip(this,1)">24時間<br><span style="font-size:11px;opacity:.7">ひと晩</span></button>
+          <button class="rip-btn" onclick="selRip(this,3)">3日間<br><span style="font-size:11px;opacity:.7">少し寝かせる</span></button>
+          <button class="rip-btn" onclick="selRip(this,7)">1週間<br><span style="font-size:11px;opacity:.7">じっくりと</span></button>
+        </div>
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveMemo()">醸造所に預ける</button>
+    <div class="dbg">
+      <button class="dbg-btn" onclick="dbgAdv(1)">+1日</button>
+      <button class="dbg-btn" onclick="dbgAdv(3)">+3日</button>
+      <button class="dbg-btn" onclick="runFade()">フェード実行</button>
+      <button class="dbg-btn" onclick="triggerMorning()">朝レビュー</button>
+      <span class="dbg-lbl">🔧 debug</span>
+    </div>
+  </div>
+
+  <div class="screen" id="scList">
+    <div class="lst-hdr"><div class="back-btn" onclick="showMemo()">←</div><div class="lst-ttl">醸造中のアイデア</div></div>
+    <div class="memo-list" id="memoList"></div>
+  </div>
+
+  <div class="screen" id="scMix">
+    <div class="lst-hdr"><div class="back-btn" onclick="showMemo()">←</div><div class="lst-ttl">アイデア触媒</div></div>
+    <div class="mix-area">
+      <div class="mix-sec-lbl">現在進行中のメインテーマ</div>
+      <input class="mix-inp" id="mixTheme" placeholder="例：卒業研究、新規アプリ開発、読書記録…"/>
+      <button class="mix-btn" onclick="runMixer()">✦ スパイスを投入する</button>
+      <div id="catWrap" style="display:none;" class="cat-wrap"></div>
+      <div id="mixEmpty" style="display:none;" class="mix-empty">
+        <div style="font-size:34px;margin-bottom:8px;">🌱</div>
+        <div style="font-size:13px;line-height:1.7;">メモが少なすぎて触媒が見つかりませんでした。<br>もう少し醸造してみてください。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab active" id="tab0" onclick="showMemo()"><span class="tab-icon">✏️</span><span>メモ</span></button>
+    <button class="tab" id="tab1" onclick="showList()"><span class="tab-icon">🗂</span><span>一覧</span></button>
+    <button class="tab" id="tab2" onclick="showMix()"><span class="tab-icon">⚗️</span><span>触媒</span></button>
+  </div>
+</div>
+
+<div class="s-ov" id="sOv"><div class="s-ic" id="sIc">🫧</div><div class="s-tx">醸造所に預けました</div><div class="s-sub">しばらく忘れて大丈夫。</div></div>
+<div class="toast" id="toast"></div>
+
+<div class="m-ov" id="mOv">
+  <div class="m-sheet">
+    <div class="m-handle"></div>
+    <div id="mRevPanel">
+      <div class="m-hdr">
+        <div class="m-tag">🌅 目覚めのファースト・ビュー</div>
+        <div class="m-title">熟成したアイデアを<br>見直しましょう</div>
+        <div class="m-sub" id="mSub"></div>
+      </div>
+      <div class="m-prog"><div class="m-prog-tx" id="mProgTx"></div><div class="m-prog-bar"><div class="m-prog-fill" id="mProgFill" style="width:0%"></div></div></div>
+      <div class="m-cw">
+        <div class="m-card" id="mCard"><div class="m-card-age" id="mCardAge"></div><div class="m-card-txt" id="mCardTxt"></div><div class="m-card-glow"></div></div>
+        <div class="m-actions">
+          <button class="m-act m-act-pass" onclick="revAct('pass')">✦ フェードアウト<span class="m-act-sub">ピンとこない</span></button>
+          <button class="m-act m-act-keep" onclick="revAct('keep')">★ 昇格させる<span class="m-act-sub">まだ光っている</span></button>
+        </div>
+      </div>
+    </div>
+    <div id="mDonePanel" style="display:none;">
+      <div class="m-done"><div class="m-done-ic" id="mDoneIc">🌿</div><div class="m-done-tx">レビュー完了しました</div><div class="m-done-sub" id="mDoneSub"></div><button class="m-done-btn" onclick="closeMorning()">一覧を確認する</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="help-ov" id="helpOv">
+  <div class="help-sheet">
+    <div class="help-handle"></div>
+    <div class="help-hdr">
+      <div><div class="help-eyebrow">ABOUT THIS APP</div><div class="help-title">思考の醸造とは？</div></div>
+      <button class="help-close" onclick="closeHelp()">✕</button>
+    </div>
+    <div class="help-scroll">
+      <div style="margin:14px 0 10px;">
+        <div class="section-lbl">コンセプト</div>
+        <div class="concept-box">
+          <div class="concept-q">脳を「倉庫」から「工場」へ</div>
+          <div class="concept-body">
+            現代人は情報過多により、常に頭のメモリがパンクしている。思いついてもすぐ忘れたり、「早く形にしなければ」と焦ったりしがちである。<br><br>
+            本アプリの目的は、「安心して、きれいに忘れること」。断片的なアイデアを一度完全に預けて脳に余白を作り、システムが裏側でじっくりと発酵させ、本当に価値のあるものだけを昇華させる。
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="section-lbl">裏側で動く4つのアルゴリズム</div>
+      <div style="font-size:12px;color:var(--stone-l);margin-bottom:10px;">『思考の整理学』（外山滋比古）の思想をデジタルロジックに翻訳</div>
+
+      <div class="step-card step-card-a">
+        <div class="step-num step-num-a">ALGORITHM 01</div>
+        <div class="step-icon">🫧</div>
+        <div class="step-name">醗酵アルゴリズム</div>
+        <div class="step-desc">メモを保存した瞬間、テキストが画面から消える。これは脳に「もう忘れていい」と錯覚させるUI演出。システムは裏側でタイムスタンプを記録し、設定した熟成期間、意図的にメモを隠す（寝かせる）。</div>
+        <span class="step-tag stag-a">→ ファストメモ画面で体験</span>
+      </div>
+
+      <div class="step-card step-card-b">
+        <div class="step-num step-num-b">ALGORITHM 02</div>
+        <div class="step-icon">🌅</div>
+        <div class="step-name">朝飯前アルゴリズム</div>
+        <div class="step-desc">前回のアクセスから8時間以上の空白を検知した初回起動時にのみ、熟成済みメモを提示する。脳がリセットされた状態のときだけ判断させることで、直感の精度を最大化する。</div>
+        <span class="step-tag stag-b">→ デバッグ「朝レビュー」で体験</span>
+      </div>
+
+      <div class="step-card step-card-c">
+        <div class="step-num step-num-c">ALGORITHM 03</div>
+        <div class="step-icon">🌫</div>
+        <div class="step-name">忘却アルゴリズム</div>
+        <div class="step-desc">「ピンとこない」と判定されたメモ、または30日以上放置されたメモは、削除確認のダイアログなしに自動で地下倉庫へ沈む。人間が睡眠中に不要な記憶を消去するように、アプリが忘却を代行する。</div>
+        <span class="step-tag stag-c">→ デバッグ「フェード実行」で体験</span>
+      </div>
+
+      <div class="step-card step-card-d">
+        <div class="step-num step-num-d">ALGORITHM 04</div>
+        <div class="step-icon">⚗️</div>
+        <div class="step-name">カクテル＆触媒アルゴリズム</div>
+        <div class="step-desc">メインテーマのキーワード（名詞など）を抽出し、過去のメモから「一見無関係だが抽象概念がどこか重なるメモ（弱いつながり）」を1件スパイスとして提示。異質な2要素の掛け合わせが、セレンディピティ（偶然の発見）を生む。</div>
+        <span class="step-tag stag-d">→ ⚗️触媒タブで体験</span>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-lbl">実際に試してみる</div>
+      <div class="try-banner" onclick="closeHelp();setTimeout(()=>{document.getElementById('memoInp').focus();},300)">
+        <span class="try-icon">✏️</span>
+        <span class="try-txt">メモを1件書いて「醸造所に預ける」を押してみる<br><span style="font-size:11px;opacity:.75;">保存後にテキストが消える演出を確認</span></span>
+        <span class="try-arr">→</span>
+      </div>
+      <div class="try-banner" onclick="closeHelp();dbgAdv(3);setTimeout(triggerMorning,400);">
+        <span class="try-icon">🌅</span>
+        <span class="try-txt">時間を3日進めて「朝レビュー」を起動する<br><span style="font-size:11px;opacity:.75;">昇格 or フェードを直感で選ぶ</span></span>
+        <span class="try-arr">→</span>
+      </div>
+      <div class="try-banner" onclick="closeHelp();setTimeout(showMix,200);">
+        <span class="try-icon">⚗️</span>
+        <span class="try-txt">触媒タブでテーマを入力してスパイスを投入する<br><span style="font-size:11px;opacity:.75;">過去のメモとの意外な組み合わせを発見</span></span>
+        <span class="try-arr">→</span>
+      </div>
+      <div style="text-align:center;padding:18px 0 4px;">
+        <div style="font-size:11px;color:var(--stone-l);line-height:1.7;">外山滋比古『思考の整理学』（筑摩書房）の思想に<br>インスパイアされて設計されたアプリです。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== テーマ：時間帯による自動ダークモード（18時〜翌6時）＋手動切替 =====
+const TK='thought_brewery_theme'; // 'auto' | 'light' | 'dark'
+function isNightNow(){const h=new Date().getHours();return h>=18||h<6;}
+function applyTheme(){
+  const mode=localStorage.getItem(TK)||'auto';
+  const dark=mode==='dark'||(mode==='auto'&&isNightNow());
+  document.documentElement.classList.toggle('dark',dark);
+  const btn=document.getElementById('themeBtn');
+  if(btn){
+    btn.textContent=mode==='auto'?'🌗':(mode==='dark'?'🌙':'☀️');
+    btn.title=mode==='auto'?'テーマ：自動（18時以降ダーク）':(mode==='dark'?'テーマ：ダーク固定':'テーマ：ライト固定');
+  }
+}
+function cycleTheme(){
+  const order=['auto','light','dark'];
+  const cur=localStorage.getItem(TK)||'auto';
+  const next=order[(order.indexOf(cur)+1)%order.length];
+  localStorage.setItem(TK,next);applyTheme();
+  toast(next==='auto'?'テーマ：自動（18時以降ダーク）':(next==='dark'?'テーマ：ダーク固定':'テーマ：ライト固定'));
+}
+applyTheme();
+setInterval(applyTheme,60000); // 18時などの境目をまたいだら自動で切替
+
+// ロジックJS（省略せずすべて保持）
+const SK='thought_brewery_memos_v2',MK='thought_brewery_meta_v2';
+let selDays=1,ripeMemos=[],revIdx=0,keptN=0,passN=0;
+
+const gM=()=>{try{return JSON.parse(localStorage.getItem(SK)||'[]');}catch{return[];}};
+const sM=m=>localStorage.setItem(SK,JSON.stringify(m));
+const gMeta=()=>{try{return JSON.parse(localStorage.getItem(MK)||'{}');}catch{return{};}};
+const sMeta=m=>localStorage.setItem(MK,JSON.stringify(m));
+
+const isRipe=m=>(Date.now()-m.createdAt)/864e5>=m.ripenDays;
+const brewPct=m=>Math.min(100,Math.round(((Date.now()-m.createdAt)/864e5/m.ripenDays)*100));
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const DL={1:'24時間',3:'3日',7:'1週間'};
+
+function fmtTime(ts){
+  const d=Math.floor((Date.now()-ts)/60000);
+  if(d<1)return'たった今';if(d<60)return`${d}分前`;
+  const h=Math.floor(d/60);if(h<24)return`${h}時間前`;
+  return`${Math.floor(h/24)}日前`;
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function updateCount(){const n=gM().filter(m=>!m.silentFaded).length;document.getElementById('cntBadge').textContent=`${n}件醸造中`;}
+
+function openHelp(){document.getElementById('helpOv').classList.add('show');}
+function closeHelp(){document.getElementById('helpOv').classList.remove('show');}
+document.addEventListener('click',e=>{if(e.target===document.getElementById('helpOv'))closeHelp();});
+document.addEventListener('click',e=>{if(e.target===document.getElementById('mOv'))closeMorning();});
+
+function runFade(){
+  const memos=gM();let n=0;
+  const cutoff=Date.now()-30*864e5;
+  memos.forEach(m=>{
+    if(!m.silentFaded&&!m.promoted&&(m.faded||(isRipe(m)&&(m.lastTouched||m.createdAt)<cutoff))){m.silentFaded=true;n++;}
+  });
+  sM(memos);updateCount();
+  if(document.getElementById('scList').classList.contains('active'))renderList();
+  toast(n>0?`${n}件が静かに地下倉庫へ…`:'フェード対象はありませんでした');
+}
+function autoFade(){
+  const memos=gM();const cutoff=Date.now()-30*864e5;let ch=false;
+  memos.forEach(m=>{
+    if(!m.silentFaded&&!m.promoted&&(m.faded||(isRipe(m)&&(m.lastTouched||m.createdAt)<cutoff))){m.silentFaded=true;ch=true;}
+  });
+  if(ch){sM(memos);updateCount();}
+}
+
+const STOP=new Set('の,は,が,を,に,で,と,も,や,から,まで,ため,こと,もの,それ,これ,あれ,なる,する,いる,ある,ます,です,した,して,ている,ない,など,また,ただ,しかし,そして'.split(','));
+function kw(txt){return[...new Set(txt.replace(/[。、！？・…\n\r「」]/g,' ').split(/\s+/).filter(w=>w.length>=2&&!STOP.has(w)))];}
+function score(m,tk){const mk=kw(m.text);let s=0;tk.forEach(k=>{if(mk.some(w=>w.includes(k)||k.includes(w)))s+=2;});mk.forEach(k=>{if(tk.some(t=>t.includes(k)||k.includes(t)))s+=1;});return s;}
+const PROMPTS=[
+  (th,m)=>`「${th}」と「${m.text.slice(0,18)}…」を掛け合わせると何が生まれる？`,
+  (th,m)=>`${m.text.slice(0,18)}…のアプローチで「${th}」の課題を解くとしたら？`,
+  (th,m)=>`「${th}」の中にこのメモのエッセンスを埋め込む方法を考えてみてください。`,
+  (th,m)=>`このメモは「${th}」の意外な突破口かもしれません。接点はどこ？`,
+];
+
+function runMixer(){
+  const theme=document.getElementById('mixTheme').value.trim();
+  if(!theme){toast('テーマを入力してください');return;}
+  const pool=gM().filter(m=>!m.silentFaded);
+  const cw=document.getElementById('catWrap'),em=document.getElementById('mixEmpty');
+  if(!pool.length){cw.style.display='none';em.style.display='block';return;}
+  const tk=kw(theme);
+  const sc=pool.map(m=>({m,s:score(m,tk)}));
+  const cands=sc.filter(x=>x.s>0);
+  const arr=cands.length?cands:sc;
+  const pick=arr[Math.floor(Math.random()*arr.length)];
+  const memo=pick.m;const pts=pick.s;
+  const dAgo=Math.floor((Date.now()-memo.createdAt)/864e5);
+  const pr=PROMPTS[Math.floor(Math.random()*PROMPTS.length)](theme,memo);
+  const rel=pts>=4?'高い関連性を検出':pts>0?'微かな共鳴を検出':'ランダム選出（異質な出会い）';
+  cw.style.display='block';em.style.display='none';
+  cw.innerHTML=`
+    <div class="cat-lbl"><span class="cat-dot"></span>触媒メモが投入されました</div>
+    <div class="cat-card">
+      <div class="cat-theme-row"><span class="cat-theme-badge">${esc(theme)}</span><span class="cat-cross">×</span></div>
+      <div class="cat-age">${dAgo}日前に醸造 · ${DL[memo.ripenDays]||memo.ripenDays+'日'}熟成</div>
+      <div class="cat-txt">${esc(memo.text)}</div>
+      <div class="cat-prompt"><div class="cat-prompt-lbl">💡 思考の触媒</div><div class="cat-prompt-txt">${esc(pr)}</div></div>
+      <div class="cat-score">マッチング: ${rel} (${pts}pt)</div>
+    </div>
+    <button class="mix-re-btn" onclick="runMixer()">別のスパイスを試す ↺</button>`;
+  const mm=gM();const i=mm.findIndex(x=>x.id===memo.id);
+  if(i>=0){mm[i].lastTouched=Date.now();sM(mm);}
+}
+
+function checkMorning(){
+  const meta=gMeta();const now=Date.now();
+  const gap=(now-(meta.lastVisit||0))/3600000;
+  const ripe=gM().filter(m=>isRipe(m)&&!m.reviewed&&!m.silentFaded);
+  if(ripe.length&&(gap>=8||!meta.lastVisit))setTimeout(triggerMorning,700);
+  meta.lastVisit=now;sMeta(meta);
+}
+function triggerMorning(){
+  ripeMemos=gM().filter(m=>isRipe(m)&&!m.reviewed&&!m.silentFaded);
+  if(!ripeMemos.length){toast('熟成完了のメモがありません');return;}
+  revIdx=0;keptN=0;passN=0;
+  document.getElementById('mRevPanel').style.display='';
+  document.getElementById('mDonePanel').style.display='none';
+  document.getElementById('mSub').textContent=`${ripeMemos.length}件のアイデアが熟成されました。`;
+  showRevCard();
+  document.getElementById('mOv').classList.add('show');
+}
+function showRevCard(){
+  const tot=ripeMemos.length;
+  document.getElementById('mProgTx').textContent=`${revIdx+1} / ${tot}`;
+  document.getElementById('mProgFill').style.width=Math.round(revIdx/tot*100)+'%';
+  const m=ripeMemos[revIdx];
+  const days=Math.floor((Date.now()-m.createdAt)/864e5);
+  document.getElementById('mCardAge').textContent=`${days}日間 醸造 · ${DL[m.ripenDays]||m.ripenDays+'日'}熟成`;
+  document.getElementById('mCardTxt').textContent=m.text;
+  const c=document.getElementById('mCard');c.classList.remove('sw-k','sw-p');c.style.opacity='';c.style.transform='';
+}
+function revAct(act){
+  const c=document.getElementById('mCard');
+  c.classList.add(act==='keep'?'sw-k':'sw-p');
+  const memo=ripeMemos[revIdx];const mm=gM();const i=mm.findIndex(x=>x.id===memo.id);
+  setTimeout(()=>{
+    if(i>=0){mm[i].reviewed=true;mm[i].lastTouched=Date.now();
+      if(act==='keep'){mm[i].promoted=true;keptN++;}
+      else{mm[i].faded=true;mm[i].silentFaded=true;passN++;}
+    }
+    sM(mm);revIdx++;
+    if(revIdx>=ripeMemos.length)showDone();else showRevCard();
+  },360);
+}
+function showDone(){
+  document.getElementById('mRevPanel').style.display='none';
+  document.getElementById('mDonePanel').style.display='';
+  document.getElementById('mDoneIc').textContent=keptN>0?'✨':'🌿';
+  let sub='';
+  if(keptN>0)sub+=`${keptN}件をメタ・ノートに昇格させました。\n`;
+  if(passN>0)sub+=`${passN}件は静かにフェードアウトします。`;
+  document.getElementById('mDoneSub').textContent=sub.trim();
+  updateCount();
+}
+function closeMorning(){document.getElementById('mOv').classList.remove('show');showList();}
+
+function selRip(el,d){document.querySelectorAll('.rip-btn').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');selDays=d;}
+function saveMemo(){
+  const el=document.getElementById('memoInp');const text=el.value.trim();
+  if(!text){toast('何か書いてから預けてください');return;}
+  const mm=gM();mm.unshift({id:Date.now().toString(),text,createdAt:Date.now(),ripenDays:selDays,lastTouched:Date.now()});
+  sM(mm);el.value='';updateCount();
+  const ov=document.getElementById('sOv');
+  document.getElementById('sIc').textContent=['🫧','🌿','🌾','✨','💧'][Math.floor(Math.random()*5)];
+  ov.classList.add('show');
+  setTimeout(()=>{ov.style.opacity='0';setTimeout(()=>{ov.classList.remove('show');ov.style.opacity='';},400);},1800);
+}
+
+function dbgAdv(d){
+  const mm=gM();mm.forEach(m=>m.createdAt-=d*864e5);sM(mm);updateCount();
+  if(document.getElementById('scList').classList.contains('active'))renderList();
+  toast(`時計を${d}日進めました ⏩`);
+}
+
+function delMemo(id){
+  const mm=gM();const i=mm.findIndex(m=>m.id===id);if(i<0)return;
+  const card=document.querySelector(`[data-id="${id}"]`);
+  if(card){card.classList.add('silent-fading');setTimeout(()=>{mm[i].silentFaded=true;sM(mm);renderList();updateCount();},600);}
+  else{mm[i].silentFaded=true;sM(mm);renderList();updateCount();}
+  toast('記憶の地下倉庫へ');
+}
+
+function renderList(){
+  const mm=gM().filter(m=>!m.silentFaded);
+  const el=document.getElementById('memoList');
+  if(!mm.length){el.innerHTML=`<div class="empty"><div class="empty-ic">🌱</div><div class="empty-tx">まだアイデアがありません。<br>頭に浮かんだことを預けてみてください。</div></div>`;return;}
+  el.innerHTML=mm.map(m=>{
+    const p=brewPct(m);const ripe=isRipe(m);const lbl=DL[m.ripenDays]||`${m.ripenDays}日`;
+    let badge;
+    if(m.promoted)badge=`<span class="badge b-promoted">★ メタ・ノート</span>`;
+    else if(ripe)badge=`<span class="badge b-ripe">✦ 熟成完了</span>`;
+    else badge=`<span class="badge b-brew">醸造中 ${p}%</span>`;
+    return`<div class="mc" data-id="${m.id}">
+      <div class="mc-txt">${esc(m.text)}</div>
+      ${!ripe?`<div class="brew-bar"><div class="brew-fill" style="width:${p}%"></div></div><div class="brew-lbl"><span>開始</span><span>${lbl}で熟成</span></div>`:''}
+      <div class="mc-meta"><span class="mc-time">${fmtTime(m.createdAt)}</span>
+        <div style="display:flex;gap:7px;align-items:center;">${badge}<button class="del-btn" onclick="delMemo('${m.id}')">忘れる</button></div>
+      </div></div>`;
+  }).join('');
+}
+
+function _sw(id,ti){['scMemo','scList','scMix'].forEach(s=>document.getElementById(s).classList.toggle('active',s===id));['tab0','tab1','tab2'].forEach(t=>document.getElementById(t).classList.toggle('active',t===ti));}
+function showMemo(){_sw('scMemo','tab0');document.getElementById('memoInp').focus();}
+function showList(){_sw('scList','tab1');renderList();}
+function showMix(){_sw('scMix','tab2');}
+
+autoFade();updateCount();checkMorning();
+
+// ===== Service Worker 登録（オフライン対応・HTTPS or localhost のみ有効）=====
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{});});
+}
+</script>
+</body>
+</html>
