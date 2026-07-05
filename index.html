@@ -303,15 +303,67 @@
 
   .divider{height:.5px;background:rgba(122,118,112,.15);margin:14px 0;}
   .section-lbl{font-size:12px;font-weight:500;color:var(--stone-l);letter-spacing:.07em;margin-bottom:10px;}
+
+  /* ===== v2: 演出強化 ===== */
+  /* ヘッダーの醸造中フラスコ（泡が上る） */
+  .hdr-flask{width:30px;height:34px;flex-shrink:0;}
+  .hdr-flask svg{width:100%;height:100%;display:block;overflow:visible;}
+  .hf-liq{animation:hfWave 3.2s ease-in-out infinite;}
+  @keyframes hfWave{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.2px)}}
+  .hf-b{animation:hfRise 2.6s linear infinite;opacity:0;}
+  .hf-b2{animation-delay:1.3s;}
+  @keyframes hfRise{0%{transform:translateY(0);opacity:0}15%{opacity:.9}80%{opacity:.9}100%{transform:translateY(-12px);opacity:0}}
+
+  /* 一覧タブの熟成バッジ */
+  .tab{position:relative;}
+  .tab-dot{position:absolute;top:6px;right:calc(50% - 20px);min-width:16px;height:16px;padding:0 4px;border-radius:9px;background:#D97742;color:#fff;font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;line-height:1;}
+  .tab-dot.on{display:flex;}
+
+  /* 醸造中バーのきらめき */
+  .brew-fill{position:relative;overflow:hidden;}
+  .brew-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:shimmer 2.8s ease-in-out infinite;}
+  @keyframes shimmer{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}
+
+  /* 熟成完了カードの静かな光 */
+  .mc.ripe{border-color:rgba(92,122,107,.55);animation:ripePulse 2.8s ease-in-out infinite;}
+  @keyframes ripePulse{0%,100%{box-shadow:0 0 0 1px rgba(92,122,107,.12),0 3px 12px rgba(92,122,107,.10)}50%{box-shadow:0 0 0 1px rgba(92,122,107,.28),0 5px 22px rgba(92,122,107,.26)}}
+  .mc.promoted{border-left:3px solid var(--violet);}
+
+  /* カードの入場アニメーション */
+  @keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .mc{animation:cardIn .4s ease backwards;}
+
+  /* 保存演出：立ちのぼる泡 */
+  .bub-field{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+  .bub{position:absolute;bottom:-48px;border-radius:50%;background:var(--sage-p);border:1px solid rgba(92,122,107,.35);animation:bubUp linear forwards;}
+  @keyframes bubUp{0%{transform:translateY(0) scale(.6);opacity:0}12%{opacity:.9}100%{transform:translateY(-110vh) scale(1.15);opacity:0}}
+  .s-ic{animation:icPop .5s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes icPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* バックアップ行（一覧画面の下部） */
+  .bk-row{padding:8px 14px 14px;display:flex;gap:10px;}
+  .bk-btn{flex:1;padding:12px;border-radius:10px;border:.5px solid rgba(92,122,107,.3);background:var(--white);color:var(--sage);font-size:13px;font-family:inherit;font-weight:700;cursor:pointer;}
+  .bk-btn:active{transform:scale(.97);}
 </style>
 </head>
 <body>
 
 <div class="app">
   <div class="hdr">
-    <div class="hdr-l">
-      <div class="hdr-t">思考醸造所</div>
-      <div class="hdr-s">アイデアを預けて、忘れる</div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="hdr-flask" aria-hidden="true">
+        <svg viewBox="0 0 30 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path class="hf-liq" d="M9.5 17.5 L5.6 26.2 Q4.8 28.6 7.2 28.6 L22.8 28.6 Q25.2 28.6 24.4 26.2 L20.5 17.5 Z" fill="var(--sage-l)"/>
+          <circle class="hf-b" cx="13" cy="25" r="1.6" fill="var(--paper)"/>
+          <circle class="hf-b hf-b2" cx="17.5" cy="26" r="1.1" fill="var(--paper)"/>
+          <path d="M12 5 L12 13 L5.5 26.5 Q4.5 29 7 29 L23 29 Q25.5 29 24.5 26.5 L18 13 L18 5" stroke="var(--sage)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10.5 5 L19.5 5" stroke="var(--sage)" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="hdr-l">
+        <div class="hdr-t">思考醸造所</div>
+        <div class="hdr-s">アイデアを預けて、忘れる</div>
+      </div>
     </div>
     <div class="hdr-r">
       <div class="cnt-badge" onclick="showList()" id="cntBadge">0件醸造中</div>
@@ -346,6 +398,11 @@
   <div class="screen" id="scList">
     <div class="lst-hdr"><div class="back-btn" onclick="showMemo()">←</div><div class="lst-ttl">醸造中のアイデア</div></div>
     <div class="memo-list" id="memoList"></div>
+    <div class="bk-row">
+      <button class="bk-btn" onclick="exportData()">⬇ バックアップ書き出し</button>
+      <button class="bk-btn" onclick="document.getElementById('impFile').click()">⬆ 読み込み</button>
+      <input type="file" id="impFile" accept="application/json,.json" style="display:none" onchange="importData(this.files[0])">
+    </div>
   </div>
 
   <div class="screen" id="scMix">
@@ -364,12 +421,12 @@
 
   <div class="tab-bar">
     <button class="tab active" id="tab0" onclick="showMemo()"><span class="tab-icon">✏️</span><span>メモ</span></button>
-    <button class="tab" id="tab1" onclick="showList()"><span class="tab-icon">🗂</span><span>一覧</span></button>
+    <button class="tab" id="tab1" onclick="showList()"><span class="tab-icon">🗂</span><span>一覧</span><span class="tab-dot" id="tabDot"></span></button>
     <button class="tab" id="tab2" onclick="showMix()"><span class="tab-icon">⚗️</span><span>触媒</span></button>
   </div>
 </div>
 
-<div class="s-ov" id="sOv"><div class="s-ic" id="sIc">🫧</div><div class="s-tx">醸造所に預けました</div><div class="s-sub">しばらく忘れて大丈夫。</div></div>
+<div class="s-ov" id="sOv"><div class="bub-field" id="bubField"></div><div class="s-ic" id="sIc">🫧</div><div class="s-tx">醸造所に預けました</div><div class="s-sub">しばらく忘れて大丈夫。</div></div>
 <div class="toast" id="toast"></div>
 
 <div class="m-ov" id="mOv">
@@ -519,7 +576,74 @@ function fmtTime(ts){
   return`${Math.floor(h/24)}日前`;
 }
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
-function updateCount(){const n=gM().filter(m=>!m.silentFaded).length;document.getElementById('cntBadge').textContent=`${n}件醸造中`;}
+function updateCount(){
+  const mm=gM();
+  const n=mm.filter(m=>!m.silentFaded).length;
+  document.getElementById('cntBadge').textContent=`${n}件醸造中`;
+  // 熟成完了（未レビュー）の件数 → タブバッジ + アプリアイコンのバッジ(iOS 16.4+のホーム画面PWA)
+  const ripe=mm.filter(m=>isRipe(m)&&!m.reviewed&&!m.silentFaded).length;
+  const dot=document.getElementById('tabDot');
+  if(dot){dot.textContent=ripe;dot.classList.toggle('on',ripe>0);}
+  if('setAppBadge' in navigator){
+    try{(ripe>0?navigator.setAppBadge(ripe):navigator.clearAppBadge()).catch(()=>{});}catch(e){}
+  }
+}
+// アプリを離れる瞬間にもバッジを最新化（次に見た時に熟成数が残る）
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')updateCount();});
+
+// ===== バックアップ（書き出し / 読み込み）=====
+async function exportData(){
+  const data={app:'思考醸造所',version:2,exportedAt:new Date().toISOString(),memos:gM(),meta:gMeta()};
+  const json=JSON.stringify(data,null,2);
+  const name=`思考醸造所バックアップ_${new Date().toISOString().slice(0,10)}.json`;
+  // iPhoneでは共有シート（ファイルに保存/AirDrop等）を優先
+  if(navigator.share&&navigator.canShare){
+    try{
+      const file=new File([json],name,{type:'application/json'});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:name});
+        toast('バックアップを書き出しました');return;
+      }
+    }catch(e){if(e&&e.name==='AbortError')return;}
+  }
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([json],{type:'application/json'}));
+  a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast('バックアップを書き出しました');
+}
+function importData(f){
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      const inc=Array.isArray(d)?d:(d.memos||[]);
+      if(!Array.isArray(inc)||!inc.length){toast('メモが見つかりませんでした');return;}
+      const cur=gM();const ids=new Set(cur.map(m=>m.id));let add=0;
+      inc.forEach(m=>{if(m&&m.id&&m.text&&!ids.has(m.id)){cur.push(m);add++;}});
+      cur.sort((a,b)=>b.createdAt-a.createdAt);sM(cur);
+      updateCount();renderList();
+      toast(add?`${add}件のメモを復元しました`:'すべて取り込み済みでした');
+    }catch(e){toast('読み込みに失敗しました（ファイル形式）');}
+  };
+  r.readAsText(f);
+  document.getElementById('impFile').value='';
+}
+
+// ===== 保存演出：立ちのぼる泡 =====
+function spawnBubbles(){
+  const f=document.getElementById('bubField');if(!f)return;f.innerHTML='';
+  for(let i=0;i<14;i++){
+    const b=document.createElement('div');b.className='bub';
+    const s=8+Math.random()*26;
+    b.style.width=b.style.height=s+'px';
+    b.style.left=(6+Math.random()*88)+'%';
+    b.style.animationDuration=(1.4+Math.random()*1.2)+'s';
+    b.style.animationDelay=(Math.random()*0.5)+'s';
+    f.appendChild(b);
+  }
+}
 
 function openHelp(){document.getElementById('helpOv').classList.add('show');}
 function closeHelp(){document.getElementById('helpOv').classList.remove('show');}
@@ -644,6 +768,7 @@ function saveMemo(){
   sM(mm);el.value='';updateCount();
   const ov=document.getElementById('sOv');
   document.getElementById('sIc').textContent=['🫧','🌿','🌾','✨','💧'][Math.floor(Math.random()*5)];
+  spawnBubbles();
   ov.classList.add('show');
   setTimeout(()=>{ov.style.opacity='0';setTimeout(()=>{ov.classList.remove('show');ov.style.opacity='';},400);},1800);
 }
@@ -666,13 +791,14 @@ function renderList(){
   const mm=gM().filter(m=>!m.silentFaded);
   const el=document.getElementById('memoList');
   if(!mm.length){el.innerHTML=`<div class="empty"><div class="empty-ic">🌱</div><div class="empty-tx">まだアイデアがありません。<br>頭に浮かんだことを預けてみてください。</div></div>`;return;}
-  el.innerHTML=mm.map(m=>{
+  el.innerHTML=mm.map((m,i)=>{
     const p=brewPct(m);const ripe=isRipe(m);const lbl=DL[m.ripenDays]||`${m.ripenDays}日`;
     let badge;
     if(m.promoted)badge=`<span class="badge b-promoted">★ メタ・ノート</span>`;
     else if(ripe)badge=`<span class="badge b-ripe">✦ 熟成完了</span>`;
     else badge=`<span class="badge b-brew">醸造中 ${p}%</span>`;
-    return`<div class="mc" data-id="${m.id}">
+    const cls='mc'+(m.promoted?' promoted':(ripe?' ripe':''));
+    return`<div class="${cls}" style="animation-delay:${Math.min(i*0.05,0.4)}s" data-id="${m.id}">
       <div class="mc-txt">${esc(m.text)}</div>
       ${!ripe?`<div class="brew-bar"><div class="brew-fill" style="width:${p}%"></div></div><div class="brew-lbl"><span>開始</span><span>${lbl}で熟成</span></div>`:''}
       <div class="mc-meta"><span class="mc-time">${fmtTime(m.createdAt)}</span>

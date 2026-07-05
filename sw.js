@@ -1,7 +1,7 @@
 // 思考醸造所 — オフライン対応 Service Worker
 // 注意: Service Worker は HTTPS もしくは localhost でのみ有効です。
 // （http://192.168.x.x のようなLAN直アクセスでは登録されません＝オフライン不可）
-const CACHE = 'brewery-v1';
+const CACHE = 'brewery-v2';
 const ASSETS = [
   './',
   './index.html',
