@@ -344,6 +344,14 @@
   .bk-row{padding:8px 14px 14px;display:flex;gap:10px;}
   .bk-btn{flex:1;padding:12px;border-radius:10px;border:.5px solid rgba(92,122,107,.3);background:var(--white);color:var(--sage);font-size:13px;font-family:inherit;font-weight:700;cursor:pointer;}
   .bk-btn:active{transform:scale(.97);}
+
+  /* AI触媒設定 */
+  .ai-toggle{width:100%;margin-top:18px;padding:11px;border-radius:10px;border:.5px dashed rgba(92,122,107,.4);background:none;color:var(--stone);font-size:12px;font-family:inherit;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .ai-on{color:var(--sage);font-weight:800;}
+  .ai-set{margin-top:10px;padding:14px;border-radius:12px;background:var(--white);border:.5px solid rgba(92,122,107,.25);}
+  .ai-note{font-size:11px;color:var(--stone-l);line-height:1.7;margin-bottom:10px;}
+  .ai-thinking{animation:aiPulse 1.4s ease-in-out infinite;}
+  @keyframes aiPulse{0%,100%{opacity:.55}50%{opacity:1}}
 </style>
 </head>
 <body>
@@ -412,6 +420,15 @@
       <input class="mix-inp" id="mixTheme" placeholder="例：卒業研究、新規アプリ開発、読書記録…"/>
       <button class="mix-btn" onclick="runMixer()">✦ スパイスを投入する</button>
       <div id="catWrap" style="display:none;" class="cat-wrap"></div>
+      <button class="ai-toggle" onclick="toggleAiSet()">🤖 AI触媒 <span id="aiStatus">OFF</span></button>
+      <div id="aiSet" class="ai-set" style="display:none;">
+        <div class="ai-note">Anthropic APIキーを設定すると、AIが本物の「意外な掛け合わせ」を生成します。<br>・キーはこの端末のみに保存されます（サーバーには置きません）<br>・実行時にテーマとメモがAnthropic APIへ送信されます<br>・キーは console.anthropic.com で取得（従量課金・1回あたり数円）</div>
+        <input class="mix-inp" id="aiKeyInp" type="password" placeholder="sk-ant-api03-..." autocomplete="off"/>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="bk-btn" onclick="saveAiKey()">保存して有効化</button>
+          <button class="bk-btn" onclick="clearAiKey()">オフにする</button>
+        </div>
+      </div>
       <div id="mixEmpty" style="display:none;" class="mix-empty">
         <div style="font-size:34px;margin-bottom:8px;">🌱</div>
         <div style="font-size:13px;line-height:1.7;">メモが少なすぎて触媒が見つかりませんでした。<br>もう少し醸造してみてください。</div>
@@ -678,7 +695,105 @@ const PROMPTS=[
   (th,m)=>`このメモは「${th}」の意外な突破口かもしれません。接点はどこ？`,
 ];
 
+// ===== AI触媒（Claude API・任意設定）=====
+const AK='thought_brewery_apikey';
+const getAiKey=()=>localStorage.getItem(AK)||'';
+function updateAiStatus(){
+  const el=document.getElementById('aiStatus');
+  if(!el)return;
+  el.textContent=getAiKey()?'✓ ON':'OFF';
+  el.classList.toggle('ai-on',!!getAiKey());
+}
+function toggleAiSet(){
+  const s=document.getElementById('aiSet');
+  const show=s.style.display==='none';
+  s.style.display=show?'':'none';
+  if(show)document.getElementById('aiKeyInp').value=getAiKey();
+}
+function saveAiKey(){
+  const v=document.getElementById('aiKeyInp').value.trim();
+  if(!v){toast('APIキーを入力してください');return;}
+  localStorage.setItem(AK,v);updateAiStatus();
+  document.getElementById('aiSet').style.display='none';
+  toast('AI触媒が有効になりました 🤖');
+}
+function clearAiKey(){
+  localStorage.removeItem(AK);
+  document.getElementById('aiKeyInp').value='';
+  updateAiStatus();toast('AI触媒をオフにしました');
+}
+
 function runMixer(){
+  if(getAiKey()){runMixerAI();}else{runMixerLocal();}
+}
+
+async function runMixerAI(){
+  const theme=document.getElementById('mixTheme').value.trim();
+  if(!theme){toast('テーマを入力してください');return;}
+  const pool=gM().filter(m=>!m.silentFaded);
+  const cw=document.getElementById('catWrap'),em=document.getElementById('mixEmpty');
+  if(!pool.length){cw.style.display='none';em.style.display='block';return;}
+  const cand=pool.slice(0,12); // 直近12件をAIに渡す
+  cw.style.display='block';em.style.display='none';
+  cw.innerHTML=`<div class="cat-lbl"><span class="cat-dot"></span>AIが醸造中…</div>
+    <div class="cat-card ai-thinking"><div class="cat-txt">⚗️ メモの中から意外な化学反応を探しています…</div></div>`;
+  try{
+    const list=cand.map((m,i)=>`${i}: ${m.text.replace(/\s+/g,' ').slice(0,120)}`).join('\n');
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'x-api-key':getAiKey(),
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-opus-4-8',
+        max_tokens:700,
+        system:'あなたはメモアプリ「思考醸造所」の触媒AI。外山滋比古『思考の整理学』の思想（アイデアの醸造・カクテル・触媒）に基づき、ユーザーのメインテーマと過去のメモの断片から「一見無関係だが本質が響き合う」メモを1つ選び、セレンディピティを生む接点と問いを日本語で返す。表面的なキーワード一致ではなく、抽象概念の共鳴を重視すること。',
+        output_config:{format:{type:'json_schema',schema:{
+          type:'object',
+          properties:{
+            index:{type:'integer',description:'選んだメモの番号'},
+            connection:{type:'string',description:'テーマとそのメモの意外な接点。80字以内'},
+            question:{type:'string',description:'思考を触発する具体的な問い。60字以内'}
+          },
+          required:['index','connection','question'],
+          additionalProperties:false
+        }}},
+        messages:[{role:'user',content:`メインテーマ: ${theme}\n\n過去のメモ:\n${list}`}]
+      })
+    });
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      throw new Error((err&&err.error&&err.error.message)||('HTTP '+res.status));
+    }
+    const data=await res.json();
+    if(data.stop_reason==='refusal')throw new Error('AIが応答を控えました');
+    const txt=((data.content||[]).find(b=>b.type==='text')||{}).text||'';
+    const out=JSON.parse(txt);
+    const memo=cand[Math.max(0,Math.min(cand.length-1,out.index|0))];
+    const dAgo=Math.floor((Date.now()-memo.createdAt)/864e5);
+    cw.innerHTML=`
+      <div class="cat-lbl"><span class="cat-dot"></span>AI触媒が投入されました 🤖</div>
+      <div class="cat-card">
+        <div class="cat-theme-row"><span class="cat-theme-badge">${esc(theme)}</span><span class="cat-cross">×</span></div>
+        <div class="cat-age">${dAgo}日前に醸造 · ${DL[memo.ripenDays]||memo.ripenDays+'日'}熟成</div>
+        <div class="cat-txt">${esc(memo.text)}</div>
+        <div class="cat-prompt"><div class="cat-prompt-lbl">✨ 意外な接点</div><div class="cat-prompt-txt">${esc(String(out.connection||''))}</div></div>
+        <div class="cat-prompt"><div class="cat-prompt-lbl">💡 思考の触媒</div><div class="cat-prompt-txt">${esc(String(out.question||''))}</div></div>
+        <div class="cat-score">🤖 AI触媒 (Claude)</div>
+      </div>
+      <button class="mix-re-btn" onclick="runMixer()">別のスパイスを試す ↺</button>`;
+    const mm=gM();const i=mm.findIndex(x=>x.id===memo.id);
+    if(i>=0){mm[i].lastTouched=Date.now();sM(mm);}
+  }catch(e){
+    toast('AI触媒エラー: '+String(e.message||e).slice(0,48));
+    runMixerLocal(); // 失敗時はローカル触媒に自動フォールバック
+  }
+}
+
+function runMixerLocal(){
   const theme=document.getElementById('mixTheme').value.trim();
   if(!theme){toast('テーマを入力してください');return;}
   const pool=gM().filter(m=>!m.silentFaded);
@@ -812,7 +927,7 @@ function showMemo(){_sw('scMemo','tab0');document.getElementById('memoInp').focu
 function showList(){_sw('scList','tab1');renderList();}
 function showMix(){_sw('scMix','tab2');}
 
-autoFade();updateCount();checkMorning();
+autoFade();updateCount();checkMorning();updateAiStatus();
 
 // ===== Service Worker 登録（オフライン対応・HTTPS or localhost のみ有効）=====
 if('serviceWorker' in navigator){
