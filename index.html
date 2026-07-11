@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.anthropic.com; base-uri 'self'; form-action 'self'; object-src 'none'">
   <title>思考醸造所</title>
 
   <!-- ===== PWA / iOS ホーム画面アプリ対応 ===== -->
@@ -629,6 +630,20 @@ async function exportData(){
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
   toast('バックアップを書き出しました');
 }
+// 取り込みメモを安全な形に正規化（不正なid/型を除去し、XSS注入を防ぐ）
+const ALLOWED_RIPEN=[1,3,7];
+function sanitizeMemo(m){
+  if(!m||typeof m!=='object')return null;
+  const text=typeof m.text==='string'?m.text:'';
+  if(!text.trim())return null;
+  let id=String(m.id==null?'':m.id);
+  if(!/^[0-9]+$/.test(id))id=Date.now().toString()+Math.floor(Math.random()*1e4); // 不正idは再発行（数字のみ保証）
+  let createdAt=Number(m.createdAt);if(!Number.isFinite(createdAt))createdAt=Date.now();
+  let ripenDays=Number(m.ripenDays);if(!ALLOWED_RIPEN.includes(ripenDays))ripenDays=1;
+  let lastTouched=Number(m.lastTouched);if(!Number.isFinite(lastTouched))lastTouched=createdAt;
+  return {id,text:text.slice(0,5000),createdAt,ripenDays,lastTouched,
+    promoted:!!m.promoted,reviewed:!!m.reviewed,faded:!!m.faded,silentFaded:!!m.silentFaded};
+}
 function importData(f){
   if(!f)return;
   const r=new FileReader();
@@ -638,7 +653,7 @@ function importData(f){
       const inc=Array.isArray(d)?d:(d.memos||[]);
       if(!Array.isArray(inc)||!inc.length){toast('メモが見つかりませんでした');return;}
       const cur=gM();const ids=new Set(cur.map(m=>m.id));let add=0;
-      inc.forEach(m=>{if(m&&m.id&&m.text&&!ids.has(m.id)){cur.push(m);add++;}});
+      inc.forEach(raw=>{const m=sanitizeMemo(raw);if(m&&!ids.has(m.id)){ids.add(m.id);cur.push(m);add++;}});
       cur.sort((a,b)=>b.createdAt-a.createdAt);sM(cur);
       updateCount();renderList();
       toast(add?`${add}件のメモを復元しました`:'すべて取り込み済みでした');
