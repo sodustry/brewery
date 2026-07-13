@@ -142,7 +142,8 @@
   }
   .save-btn:active{transform:scale(.98);background:#4a6459;}
 
-  .dbg{margin:5px 18px 15px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content: center;}
+  .dbg{margin:5px 18px 15px;display:none;gap:6px;flex-wrap:wrap;align-items:center;justify-content: center;}
+  .dbg.show{display:flex;}
   .dbg-btn{font-size:11px;font-family:inherit;padding:6px 10px;border:.5px dashed var(--morn-d);border-radius:20px;background:#f0e9de;color:var(--amber);cursor:pointer;}
   .dbg-btn:hover{background:#ddd3c0;}
   .dbg-lbl{font-size:11px;color:var(--stone-l);}
@@ -553,8 +554,9 @@
 // ===== テーマ：時間帯による自動ダークモード（18時〜翌6時）＋手動切替 =====
 const TK='thought_brewery_theme'; // 'auto' | 'light' | 'dark'
 function isNightNow(){const h=new Date().getHours();return h>=18||h<6;}
+function forcedTheme(){const t=new URLSearchParams(location.search).get('theme');return (t==='light'||t==='dark'||t==='auto')?t:null;}
 function applyTheme(){
-  const mode=localStorage.getItem(TK)||'auto';
+  const mode=forcedTheme()||localStorage.getItem(TK)||'auto';
   const dark=mode==='dark'||(mode==='auto'&&isNightNow());
   document.documentElement.classList.toggle('dark',dark);
   const btn=document.getElementById('themeBtn');
@@ -942,6 +944,8 @@ function showMemo(){_sw('scMemo','tab0');document.getElementById('memoInp').focu
 function showList(){_sw('scList','tab1');renderList();}
 function showMix(){_sw('scMix','tab2');}
 
+// 開発用debugボタンは既定で非表示。?debug=1 を付けた時だけ表示
+if(new URLSearchParams(location.search).has('debug')){const _d=document.querySelector('.dbg');if(_d)_d.classList.add('show');}
 autoFade();updateCount();checkMorning();updateAiStatus();
 
 // ===== Service Worker 登録（オフライン対応・HTTPS or localhost のみ有効）=====
